@@ -1,0 +1,3 @@
+dim_db.dim_test1:50
+dim_db.dim_test2:100
+dwt_db.dwt_test:200
