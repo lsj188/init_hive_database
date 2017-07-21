@@ -43,7 +43,7 @@
 #校验输入参数
 if [ ! -n "$1" ] ;then  
     echo "未输入版本号"
-	  exit 1
+    exit 1
 fi
 version=$1
 
@@ -66,17 +66,17 @@ validation_db_tables()
         db_name=${line%:*}
         cfg_table_cnt=${line##*:}
         validation_sql="use ${db_name};show tables;"
-		#current_tab_cnt=`hive -e "${validation_sql}" 2>>${hive_log_file} | wc -l`
-		current_tab_cnt=${cfg_table_cnt}
-		echo "test:${validation_sql}"
-		
-		if [ ${cfg_table_cnt} -eq ${current_tab_cnt} ]; then
-		    echo "--------${db_name}库，验证通过，配置的表个数：${cfg_table_cnt}，当前库表个数${current_tab_cnt}--------"
-		else 
+        #current_tab_cnt=`hive -e "${validation_sql}" 2>>${hive_log_file} | wc -l`
+        current_tab_cnt=${cfg_table_cnt}
+        echo "test:${validation_sql}"
+        
+        if [ ${cfg_table_cnt} -eq ${current_tab_cnt} ]; then
+            echo "--------${db_name}库，验证通过，配置的表个数：${cfg_table_cnt}，当前库表个数${current_tab_cnt}--------"
+        else 
             echo "--------${db_name}库，验证不通过，配置的表个数：${cfg_table_cnt}，当前库表个数${current_tab_cnt}--------" 
-		fi		
-		
-	done < "${1}"
+        fi    
+        
+  done < "${1}"
 }
 
 validation_table_record()
@@ -89,16 +89,16 @@ validation_table_record()
         table_name=${tmp_str##*.}
         cfg_record_cnt=${line##*:}
         validation_sql="select count(*) from ${db_name}.${table_name};"
-		#current_record_cnt=`hive -e "${validation_sql}" 2>${hive_log_file}`
-		current_record_cnt=${cfg_record_cnt}
-		echo "test:${validation_sql}"
-		
-		if [ ${cfg_record_cnt} -eq ${current_record_cnt} ]; then
-		    echo "--------${db_name}.${table_name}表，验证通过，配置的表记录数：${cfg_record_cnt}，当前库表记录数${current_record_cnt}--------"
-		else 
+        #current_record_cnt=`hive -e "${validation_sql}" 2>${hive_log_file}`
+        current_record_cnt=${cfg_record_cnt}
+        echo "test:${validation_sql}"
+        
+        if [ ${cfg_record_cnt} -eq ${current_record_cnt} ]; then
+            echo "--------${db_name}.${table_name}表，验证通过，配置的表记录数：${cfg_record_cnt}，当前库表记录数${current_record_cnt}--------"
+        else 
             echo "--------${db_name}.${table_name}表，验证不通过，配置的表记录数：${cfg_record_cnt}，当前库表记录数${current_record_cnt}--------" 
-		fi		
-	done < "${1}"
+        fi    
+  done < "${1}"
 }
 
 start()
@@ -109,9 +109,9 @@ start()
     printf "****bak_time:${bak_time}\n\n"
     
     #数据库表个数验证
-	validation_db_tables  "${db_cfg_file}"
-	
-	#数据库表记录数校验
+    validation_db_tables  "${db_cfg_file}"
+  
+    #数据库表记录数校验
     validation_table_record  "${tab_cfg_file}"
     
     return 0

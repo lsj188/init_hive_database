@@ -42,7 +42,7 @@
 #校验输入参数
 if [ ! -n "$1" ] ;then  
     echo "未输入版本号"
-	  exit 1
+    exit 1
 fi
 version=$1
 
@@ -62,7 +62,7 @@ exec_script()
         printf "*****--成功--*****\n\n"
     else
         printf "*****--失败--*****\n\n"
-    	exit 1
+        exit 1
     fi
 }
 
@@ -76,8 +76,8 @@ start()
     #初使化表结
     script_file="${file_path}01.exec_ddl_script.sh"
     exec_script "初使化DDL脚本" ${script_file} ${version}
-	return_code=$?
-	echo "test初使化DDL脚本:状态${return_code}"
+    return_code=$?
+    echo "test初使化DDL脚本:状态${return_code}"
     
     
     

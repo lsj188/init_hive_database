@@ -43,7 +43,7 @@
 #校验输入参数
 if [ ! -n "$1" ] ;then  
     echo "未输入版本号"
-	  exit 1
+    exit 1
 fi
 version=$1
 
@@ -67,7 +67,7 @@ loadData()
         printf "*****--成功--*****\n\n"
     else
         printf "*****--失败--*****\n\n"
-    	exit 1
+        exit 1
     fi
 }
 
@@ -75,13 +75,13 @@ backUp()
 {
     echo "*******数据备份语句：${1}*******"
     #hive -e "${1}" 2>>${hive_log_file}
-	echo "test:${1}"
-	return_code=$?
+    echo "test:${1}"
+    return_code=$?
     if [ ${return_code} -eq 0 ]; then
         printf "*****--成功--*****\n\n"
     else
         printf "*****--失败--*****\n\n"
-    	exit 1
+        exit 1
     fi
 }
 
@@ -103,21 +103,21 @@ start()
         
         echo "*******${tmp_str}——表开始表的导入*******" 
         #desc_cnt=`hive -e "desc ${db_name}.${table_name}" 2>>${hive_log_file} | wc -l`
-		desc_cnt=2
+        desc_cnt=2
         echo "test:desc_cnt:${desc_cnt}"
         
         # 表存在
         if [ ${desc_cnt} -gt 1 ]; then
           
-    	    #备份表
+            #备份表
             backup_sql="create table ${bak_db_name}.${table_name}${bak_time} as select * from ${db_name}.${table_name}" 
-    	    backUp "${backup_sql}"
-    	  
-    	    #导入数据
-    	    data_file="${data_file_path}${table_name}"
-    	    load_sql="load data local inpath '${data_file}' overwrite into table ${db_name}.${table_name}"
-    	    loadData "${load_sql}"
-    	   
+            backUp "${backup_sql}"
+        
+            #导入数据
+            data_file="${data_file_path}${table_name}"
+            load_sql="load data local inpath '${data_file}' overwrite into table ${db_name}.${table_name}"
+            loadData "${load_sql}"
+         
         else
             echo "*******表存在*******"
         fi
