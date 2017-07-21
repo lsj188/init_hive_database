@@ -53,14 +53,13 @@ bak_time=$(date +'%s')
 bak_db_name="tmp_db"
 file_path="${version}/ddl_scripts/"
 hive_log_file="${version}/hive_sql.log"
-modified_tabs=()
 
 exec_add_ddl()
 {
     echo "*******$1*******"
     echo "*******文件：${2}*******"
     #hive -f "${2}" 2>${hive_log_file}
-    echo "test${2}"
+    echo "---------------test${2}"
     return_code=$?
     if [ ${return_code} -eq 0 ]; then
         printf "*****--成功--*****\n\n"
@@ -71,23 +70,51 @@ exec_add_ddl()
 }
 
 exec_modified_ddl()
-{
-   	cnt=0
-    echo "*******读取配置文件循环导入初使化数据*******"
+{   printf "*******备份修改表*******\n"
     cat "${2}" | grep "create" | grep "table" | while read line  
     do
 		tmp_str=${line#*table}
 		tmp_str=${tmp_str%(*}
 		db_name=${tmp_str%.*}
         table_name=${tmp_str##*.}
-		${modified_tabs[${cnt}]}="${tmp_str}"
-		cnt+=1
-        backup_sql="create table ${bak_db_name}.${table_name}${bak_time} as select * from ${db_name}.${table_name}" 
-        #backUp "${backup_sql}"
+		#desc_cnt=`hive -e "desc ${db_name}.${table_name}" 2>>${hive_log_file} | wc -l`
+		desc_cnt=2
+        echo "test:desc_cnt:${desc_cnt}"
+        
+        # 表存在
+        if [ ${desc_cnt} -gt 1 ]; then		
+            backup_sql="create table ${bak_db_name}.${table_name}${bak_time} as select * from ${db_name}.${table_name}" 
+            backUp "${backup_sql}"
+	    else
+		    echo "${db_name}.${table_name}表不存在！"
+		fi
 	done
 	
-	#exec_add_ddl ${2}
+	exec_add_ddl "${1}" "${2}"
 	
+}
+
+get_tab_list()
+{
+    cat "${1}" | grep "create" | grep "table" | while read line  
+    do
+		tmp_str=${line#*table}
+		tmp_str=${tmp_str%(*}
+		db_name=${tmp_str%.*}
+        table_name=${tmp_str##*.}
+        echo "${tmp_str}"
+	done
+}
+
+print_result()
+{   
+    tab_list=(`get_tab_list ${2}`)
+	echo "${1}${#tab_list[@]}个"
+	for i in ${tab_list[*]} 
+	do
+	   echo "${i}"
+	done
+
 }
 
 backUp()
@@ -114,17 +141,15 @@ start()
     
     #新增脚本
     script_file="${file_path}ddl_add_tables.hql"
-    #add_tabs=`exec_add_ddl "ADD DDL" "${script_file}"`
+    exec_add_ddl "ADD DDL" "${script_file}"
     
     #修改脚本
-    script_file="${file_path}ddl_modified_tables.hql"
-    exec_modified_ddl "Modified DDL" "${script_file}"
+    modified_script_file="${file_path}ddl_modified_tables.hql"
+	exec_modified_ddl "Modified DDL" "${modified_script_file}"
 	
-	#echo "新增表："
-	#echo ${add_tabs[@]}
-	echo "修改表：${#modified_tabs[@]}个"
-	echo ${modified_tabs[@]}
-    
+	#DDL 执行结果输出
+	print_result "新增表：" "${script_file}"
+	print_result "修改表：" "${modified_script_file}"
     
     return 0
 }
