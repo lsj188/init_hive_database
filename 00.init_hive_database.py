@@ -196,7 +196,7 @@ def loadData(tabCfgFile):
         returnCode=backUp(dbName,tabName)
         if returnCode==0:
             dataFile=dataPath+tabName+".txt"
-            sqlText="load data local inpath 'dataFile' overwrite into table {dbName}.{tabName}".format(dataFile=dataFile,tabName=tabName,dbName=dbName)
+            sqlText="load data local inpath '{dataFile}' overwrite into table {dbName}.{tabName}".format(dataFile=dataFile,tabName=tabName,dbName=dbName)
             execSql(sqlText)
         else:
             print tmpStr1,"表备份失败，请手动执行备份及创建表操作！"
