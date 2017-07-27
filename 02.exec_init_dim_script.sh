@@ -114,7 +114,7 @@ start()
             backUp "${backup_sql}"
         
             #导入数据
-            data_file="${data_file_path}${table_name}"
+            data_file="${data_file_path}${table_name}.txt"
             load_sql="load data local inpath '${data_file}' overwrite into table ${db_name}.${table_name}"
             loadData "${load_sql}"
          
