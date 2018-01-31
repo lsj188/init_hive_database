@@ -3,7 +3,7 @@
 ##*************************************************************************************************************
 
 ##*************************************************************************************************************
-## **  文件名称：  test_pyspark_log.py
+## **  文件名称：  init_hive_database.py
 ## **  功能描述：  数据库初使化脚本
 ## **  
 ## **  
@@ -25,7 +25,7 @@
 ## ** 
 ## ** ---------------------------------------------------------------------------------------
 ## ** 
-## ** 程序调用格式：test_pyspark_log.py $version
+## ** 程序调用格式：pyspark init_hive_database.py $version
 ## ** eg:pyspark test_pyspark_log.py v2.0
 ## ** 
 ## ******************************************************************************************
@@ -71,7 +71,7 @@ tabValidationCfg=currentPath+version+"/validation_cfg/table_record_cfg.txt"
 #============================================================================================
 def initSparkContext():
     print "初使化 SparkContext"
-    conf=SparkConf().setMaster("yarn-client").setAppName("test_pyspark_log")
+    conf=SparkConf().setMaster("yarn-client").setAppName("init_hive_database")
     sc = SparkContext(conf=conf)
     return HiveContext(sc),sc
 
@@ -89,13 +89,18 @@ def closeSpackContext(sc,startTime):
 #============================================================================================
 # 执行sql
 #============================================================================================
-def execSql( sqlText ):
-    print "sql语句："+sqlText
-    try:
-        resultData = sqlContext.sql(sqlText)
-        print '[' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')+']*************执行语句成功*******************'
-        return 0,resultData
+def execSql(sqlText,flag):
     
+    try:
+        #打印log
+        if flag==1:
+            print "sql语句："+sqlText
+            resultData = sqlContext.sql(sqlText)
+            print '[' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')+']*************执行语句成功*******************'
+            return 0,resultData
+        else:
+            resultData = sqlContext.sql(sqlText)
+            return 0,resultData
     except Exception,e:
         print '[' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')+']*************执行语句失败*******************'
         print Exception,":",e
@@ -103,31 +108,29 @@ def execSql( sqlText ):
         
     
     
-        
-
-    
 #============================================================================================
 # 备份表
 #============================================================================================
 def backUp(dbName,tableName):
     print "备份表："+dbName+"."+tableName
     descTab="desc "+dbName+"."+tableName
-    returnCode,resultData=execSql(descTab)
+    returnCode,resultData=execSql(descTab,1)
     
+    #表不存在返回
     if returnCode==(-1):
         print dbName+"."+tableName,"表不存在！"
         return 1
     
     bakTabName=bakDbName+"."+tableName+bakTime
     descTab="desc "+bakTabName
-    returnCode,resultData=execSql(descTab)  
+    returnCode,resultData=execSql(descTab,1)  
     
-    #本次备份存在
+    #本次备份存在返回
     if returnCode==0:
         return returnCode
     
     backUpSsql="create table "+bakTabName+" as select * from "+dbName+"."+tableName
-    returnCode,resultData=execSql(backUpSsql)
+    returnCode,resultData=execSql(backUpSsql,1)
     return returnCode
 
   
@@ -140,45 +143,69 @@ def splitSql(flag,fileName):
     tmpStr=""
     tabList=[set(),set()]
     for line in open(fileName):
-        index=line.find(';')
-        if index>=0:
-            sqlText=sqlText+line[0:index]
-            tmpStr=line[index+1:]
-            returnCode=0
-            if sqlText.find("create ")>=0 and sqlText.find(" table ")>=0:
-                tmpStr1=sqlText[0:sqlText.find("(")].replace("create","").replace("table","").strip()
-                dbName=tmpStr1[0:tmpStr1.find(".")]
-                tabName=tmpStr1[tmpStr1.find(".")+1:]
-                if flag == 1:
-                    if returnCode<>-1:
-                        returnCode,resultData=execSql(sqlText)
+      
+        #忽略注释行
+        if line.find('--')<0:
+            index=line.find(';')
+            if index>=0:
+                sqlText=sqlText+line[0:index]
+                
+                #处理一行写两条语句情况
+                tmpStr=line[index+1:]
+                returnCode=0
+                
+                #建表
+                if flag==0:
+                  
+                    #识别、拼接、执行语句
+                    if sqlText.find("create ")>=0 and sqlText.find(" table ")>=0:
+                        tmpStr1=sqlText[0:sqlText.find("(")].replace("create","").replace("table","").strip()
+                        dbName=tmpStr1[0:tmpStr1.find(".")]
+                        tabName=tmpStr1[tmpStr1.find(".")+1:]
+                        
+                        if returnCode==-1:
+                            print tmpStr1,"表备份失败，请手动执行备份及创建表操作！"
+                                                    
+                        returnCode,resultData=execSql(sqlText,1)
+                        if returnCode ==0:
+                            tabList[0].add(tmpStr1)
+                        else:
+                            tabList[1].add(tmpStr1)
+                        
+                    else:
+                        tmpStr1=sqlText.replace("drop","").replace("table","").replace("if","").replace("exists","").strip()
+                        dbName=tmpStr1[0:tmpStr1.find(".")]
+                        tabName=tmpStr1[tmpStr1.find(".")+1:]
+                        returnCode=backUp(dbName,tabName) 
+                        
+                        #备份成功执行删除表
+                        if returnCode==0:
+                            execSql(sqlText,1)
+                #修改表
+                else:
+                    tmpStr1=sqlText.replace("alter","").replace("table","").strip()
+                    tmpStr1=tmpStr1[0:tmpStr1.find(" ")]
+                    dbName=tmpStr1[0:tmpStr1.find(".")]
+                    tabName=tmpStr1[tmpStr1.find(".")+1:]
+                    returnCode=backUp(dbName,tabName) 
+                        
+                    #备份成功执行修改表
+                    if returnCode==0:
+                        returnCode,resultData=execSql(sqlText,1)
                         if returnCode ==0:
                             tabList[0].add(tmpStr1)
                         else:
                             tabList[1].add(tmpStr1)
                     else:
-                        tabList[1].add(tmpStr1)
-                        print tmpStr1,"表备份失败，请手动执行备份及创建表操作！"
-                else:
-                    returnCode,resultData=execSql(sqlText)
-                    if returnCode ==0:
-                        tabList[0].add(tmpStr1)
-                    else:
-                        tabList[1].add(tmpStr1)
+                        print tmpStr1,"表备份失败，请手动执行备份及修改表操作！"
+                              
+                #将下一条语句代码友暂存              
+                sqlText=tmpStr
             else:
-                if flag==1:
-                    tmpStr1=sqlText.replace("drop","").replace("table","").replace("if","").replace("exists","").strip()
-                    dbName=tmpStr1[0:tmpStr1.find(".")]
-                    tabName=tmpStr1[tmpStr1.find(".")+1:]
-                    returnCode=backUp(dbName,tabName)
                 
+                #拼接语句，一条语句写多行情况
+                sqlText =sqlText+line
                 
-                #备份成功执行删除表
-                if returnCode==0:
-                    execSql(sqlText)
-            sqlText=tmpStr
-        else:
-            sqlText =sqlText+line
     return tabList
 
 
@@ -196,10 +223,10 @@ def loadData(tabCfgFile):
         returnCode=backUp(dbName,tabName)
         if returnCode==0:
             dataFile=dataPath+tabName+".txt"
-            sqlText="load data local inpath 'dataFile' overwrite into table {dbName}.{tabName}".format(dataFile=dataFile,tabName=tabName,dbName=dbName)
-            execSql(sqlText)
+            sqlText="load data local inpath '{dataFile}' overwrite into table {dbName}.{tabName}".format(dataFile=dataFile,tabName=tabName,dbName=dbName)
+            execSql(sqlText,1)
         else:
-            print tmpStr1,"表备份失败，请手动执行备份及创建表操作！"
+            print tmpStr1,"表备份失败，请手动执行备份及初使化表操作！"
             
 
 #============================================================================================
@@ -210,8 +237,8 @@ def validationDbTab(dbCfgFile):
     for line in open(dbCfgFile):
         dbName=line[0:line.find(":")]
         tabCnt=int(line[line.find(":")+1:])  
-        execSql("use "+dbName)
-        returnCode,resultData=execSql("show tables")
+        execSql("use "+dbName,0)
+        returnCode,resultData=execSql("show tables",0)
         if returnCode==0:
             curentTabCnt=len(resultData.collect())
             if curentTabCnt==tabCnt:
@@ -231,7 +258,7 @@ def validationTabRecord(tabCfgFile):
         tabName=tmpStr1[tmpStr1.find(".")+1:]
         tabRecordCnt=int(line[line.find(":")+1:])
         sqlText="select count(*) as cnt from "+dbName+"."+tabName
-        returnCode,resultData=execSql(sqlText)
+        returnCode,resultData=execSql(sqlText,0)
         if returnCode==0:
             curentTabRecordCnt=resultData.collect()[0][0]    
             if curentTabRecordCnt==tabRecordCnt:
@@ -256,7 +283,8 @@ def printResult(item,tabList):
             print "--------",tab
                 
         flag=0
-
+    
+    print "**********"
 
   
 #============================================================================================
@@ -265,7 +293,7 @@ def printResult(item,tabList):
 if __name__=="__main__":
     sqlContext,sc=initSparkContext()
     try:
-        print "version:",version,"\nstartTime:",startTime.strftime('%Y-%m-%d %H:%M:%S')
+        print "version:",version,"\nstartTime:",startTime.strftime('%Y-%m-%d %H:%M:%S'),"\nbakTime",bakTime
         print "===================================================================================="
     
         #新增
