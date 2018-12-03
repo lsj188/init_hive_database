@@ -159,7 +159,7 @@ def splitSql(flag,fileName):
                   
                     #识别、拼接、执行语句
                     if sqlText.find("create ")>=0 and sqlText.find(" table ")>=0:
-                        tmpStr1=sqlText[0:sqlText.find("(")].replace("create","").replace("table","").strip()
+                        tmpStr1=sqlText[0:sqlText.find("(")].replace("create ","").replace("table ","").strip()
                         dbName=tmpStr1[0:tmpStr1.find(".")]
                         tabName=tmpStr1[tmpStr1.find(".")+1:]
                         
