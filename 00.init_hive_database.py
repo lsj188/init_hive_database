@@ -173,7 +173,7 @@ def splitSql(flag,fileName):
                             tabList[1].add(tmpStr1)
                         
                     else:
-                        tmpStr1=sqlText.replace("drop","").replace("table","").replace("if","").replace("exists","").strip()
+                        tmpStr1=sqlText.replace("drop ","").replace("table ","").replace("if ","").replace("exists ","").strip()
                         dbName=tmpStr1[0:tmpStr1.find(".")]
                         tabName=tmpStr1[tmpStr1.find(".")+1:]
                         returnCode=backUp(dbName,tabName) 
@@ -183,7 +183,7 @@ def splitSql(flag,fileName):
                             execSql(sqlText,1)
                 #修改表
                 else:
-                    tmpStr1=sqlText.replace("alter","").replace("table","").strip()
+                    tmpStr1=sqlText.replace("alter ","").replace("table ","").strip()
                     tmpStr1=tmpStr1[0:tmpStr1.find(" ")]
                     dbName=tmpStr1[0:tmpStr1.find(".")]
                     tabName=tmpStr1[tmpStr1.find(".")+1:]
